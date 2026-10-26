@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+
+<html lang="it">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Monitor Iterazione</title>
+
+<style>
+
+body{
+
+    margin:0;
+
+    padding:20px;
+
+    background:#111;
+
+    color:#fff;
+
+    font-family:Arial,sans-serif;
+
+}
+
+.container{
+
+    max-width:700px;
+
+    margin:auto;
+
+    background:#1a1a1a;
+
+    padding:25px;
+
+    border-radius:15px;
+
+}
+
+h1{
+
+    text-align:center;
+
+}
+
+input,textarea{
+
+    width:100%;
+
+    background:#222;
+
+    color:white;
+
+    border:1px solid #444;
+
+    border-radius:8px;
+
+    padding:12px;
+
+    box-sizing:border-box;
+
+    margin-bottom:15px;
+
+}
+
+textarea{
+
+    min-height:120px;
+
+}
+
+button{
+
+    width:100%;
+
+    border:none;
+
+    border-radius:8px;
+
+    padding:12px;
+
+    font-size:16px;
+
+    font-weight:bold;
+
+    cursor:pointer;
+
+}
+
+.btn{
+
+    background:#444;
+
+    color:white;
+
+}
+
+.btn-red{
+
+    background:#d30000;
+
+    color:white;
+
+}
+
+.card{
+
+    margin-top:10px;
+
+    background:#262626;
+
+    padding:15px;
+
+    border-radius:10px;
+
+}
+
+.media{
+
+    text-align:center;
+
+    font-size:30px;
+
+    color:#00ff88;
+
+    margin:25px 0;
+
+    font-weight:bold;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Monitor Iterazione</h1>
+
+<div id="setup">
+
+    <label>Data Inizio</label>
+
+    <input type="date" id="start">
+
+    <label>Data Fine</label>
+
+    <input type="date" id="end">
+
+    <button class="btn" onclick="creaIterazione()">
+        Avvia Iterazione
+    </button>
+
+</div>
+
+<div id="giornata" style="display:none">
+
+    <h3 id="oggiLabel"></h3>
+
+    <textarea
+        id="note"
+        placeholder="Note della giornata">
+    </textarea>
+
+    <input
+        id="voto"
+        type="number"
+        min="0"
+        max="10"
+        placeholder="Voto da 0 a 10">
+
+</div>
+
+<div id="storico"></div>
+
+<div id="finale"></div>
+
+</div>
+
+<script>
+
+let dati =
+JSON.parse(localStorage.getItem("iterazione"));
+
+function oggi(){
+
+    return new Date().toISOString().split("T")[0];
+
+}
+
+function salva(){
+
+    localStorage.setItem(
+        "iterazione",
+        JSON.stringify(dati)
+    );
+
+}
+
+function creaIterazione(){
+
+    let start =
+    document.getElementById("start").value;
+
+    let end =
+    document.getElementById("end").value;
+
+    if(!start || !end){
+
+        alert("Inserisci le date");
+        return;
+
+    }
+
+    dati = {
+        start:start,
+        end:end,
+        storico:[]
+    };
+
+    salva();
+    aggiorna();
+
+}
+
+function salvaGiornata(){
+
+    let voto =
+    Number(
+        document.getElementById("voto").value
+    );
+
+    let note =
+    document.getElementById("note").value;
+
+    if(voto < 0 || voto > 10){
+
+        alert("Voto da 0 a 10");
+        return;
+
+    }
+
+    let dataOggi = oggi();
+
+    if(
+        dati.storico.some(
+            g => g.data === dataOggi
+        )
+    ){
+
+        alert("Giornata già registrata");
+        return;
+
+    }
+
+    dati.storico.push({
+
+        data:dataOggi,
+        note:note,
+        voto:voto
+
+    });
+
+    salva();
+
+    document.getElementById("note").value="";
+    document.getElementById("voto").value="";
+
+    aggiorna();
+
+    if(dataOggi === dati.end){
+
+        mostraRisultato();
+
+    }
+
+}
+
+function mostraStorico(){
+
+    let html = "<h2>Storico</h2>";
+
+    dati.storico.forEach(g=>{
+
+        html += `
+        <div class="card">
+            <strong>${g.data}</strong><br>
+            ${g.note}<br><br>
+            Voto: ${g.voto}
+        </div>
+        `;
+
+    });
+
+    document.getElementById("storico")
+    .innerHTML = html;
+
+}
+
+function mostraRisultato(){
+
+    let somma = 0;
+
+    dati.storico.forEach(g=>{
+
+        somma += g.voto;
+
+    });
+
+    let media =
+    somma / dati.storico.length;
+
+    document.getElementById("giornata")
+    .style.display = "none";
+
+    document.getElementById("finale")
+    .innerHTML = `
+        <div class="media">
+            Media finale: ${media.toFixed(2)}
+        </div>
+
+        <button
+            class="btn-red"
+            onclick="cancellaIterazione()">
+
+            Cancella Iterazione
+
+        </button>
+    `;
+
+}
+
+function cancellaIterazione(){
+
+    localStorage.removeItem("iterazione");
+
+    dati = null;
+
+    document.getElementById("start").value="";
+    document.getElementById("end").value="";
+
+    document.getElementById("storico").innerHTML="";
+    document.getElementById("finale").innerHTML="";
+
+    document.getElementById("setup")
+    .style.display="block";
+
+    document.getElementById("giornata")
+    .style.display="none";
+
+}
+
+function aggiorna(){
+
+    if(!dati){
+
+        document.getElementById("setup")
+        .style.display="block";
+
+        document.getElementById("giornata")
+        .style.display="none";
+
+        return;
+
+    }
+
+    document.getElementById("setup")
+    .style.display="none";
+
+    document.getElementById("giornata")
+    .style.display="block";
+
+    document.getElementById("oggiLabel")
+    .innerText =
+    "Data odierna: " + oggi();
+
+    mostraStorico();
+
+}
+
+document.addEventListener(
+
+    "keydown",
+
+    function(e){
+
+        if(
+            e.key==="Enter" &&
+            document.activeElement.id==="voto"
+        ){
+            salvaGiornata();
+        }
+
+    }
+
+);
+
+aggiorna();
+
+</script>
+
+</body>
+
+</html>
